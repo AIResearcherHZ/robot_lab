@@ -1,0 +1,87 @@
+git clone https://github.com/AIResearcherHZ/isaaclab.git
+git clone https://github.com/AIResearcherHZ/robot_lab.git
+git clone --recurse-submodules https://github.com/AIResearcherHZ/HOVER
+
+软链接：
+ln -s /home/xhz/isaacsim _isaac_sim
+
+URDF-USD转换：
+./isaaclab.sh -p scripts/tools/convert_urdf.py /home/xhz/桌面/assets/Taks_T1/urdf/Taks_T1.urdf /home/xhz/桌面/assets/Taks_T1/urdf/Taks_T1.usd --merge-joints
+./isaaclab.sh -p scripts/tools/convert_urdf.py /home/xhz/isaaclab/source/isaaclab_assets/isaaclab_assets/robots/Taks_T1/table.urdf /home/xhz/isaaclab/source/isaaclab_assets/isaaclab_assets/robots/Taks_T1/table.usd --merge-joints
+
+键盘样本数据测试：
+./isaaclab.sh -p scripts/environments/teleoperation/print_keyboard_data.py --teleop_device keyboard
+
+G1双臂键盘控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-PickPlace-G1-InspireFTP-Abs-v0 --num_envs 1 --teleop_device keyboard --enable_pinocchio
+
+G1双臂UDP控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-PickPlace-G1-InspireFTP-Abs-v0 --num_envs 1 --teleop_device udp --enable_pinocchio
+
+Taks_T1半身键盘控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-IK-Taks_T1-Abs-v0 --num_envs 1 --teleop_device keyboard --enable_pinocchio
+
+Taks_T1半身UDP控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-IK-Taks_T1-Abs-v0 --num_envs 1 --teleop_device udp --enable_pinocchio
+
+S2R的Taks_T1半身键盘控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py \
+  --task Isaac-IK-Taks_T1-Abs-v0 \
+  --num_envs 1 \
+  --teleop_device keyboard \
+  --enable_pinocchio \
+  --enable_sim2real \
+  --robot_ip 192.168.1.203 \
+  --robot_port 6666
+
+S2R的Taks_T1半身UDP控制：
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py \
+  --task Isaac-IK-Taks_T1-Abs-v0 \
+  --num_envs 1 \
+  --teleop_device udp \
+  --enable_pinocchio \
+  --enable_sim2real \
+  --robot_ip 192.168.1.203 \
+  --robot_port 6666
+
+Locomanipulation:
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-PickPlace-Locomanipulation-G1-Abs-v0 --num_envs 1 --teleop_device keyboard --enable_pinocchio
+
+FixedBaseUpperBodyIK:
+./isaaclab.sh -p scripts/environments/teleoperation/teleop_se3_agent.py --task Isaac-PickPlace-FixedBaseUpperBodyIK-G1-Abs-v0 --num_envs 1 --teleop_device keyboard --enable_pinocchio
+
+每次都需要改：
+1. /home/xhz/isaaclab/source/isaaclab/isaaclab/devices/keyboard/dual_arm_se3_keyboard.py
+2. /home/xhz/isaaclab/source/isaaclab/isaaclab/devices/keyboard/dual_arm_se3_udp.py
+
+键盘控制说明：
+- TAB: 切换左/右臂
+- WASD/QE: 移动 (前后/左右/上下)
+- ZXTGCV: 旋转
+- K: 开合手
+- L: 重置姿态
+- R: 重置环境
+
+# 注意：环境名称必须包含版本号 -v0，否则会报 NameNotFound 错误
+# 修改说明：
+# 1. 创建了DualArmSe3Keyboard类，输出38维动作(双臂7+7+手部24)，详见"双臂键盘控制说明.md"
+# 2. 优化了旋转控制速度：增加键盘灵敏度(0.05→0.15)、Pink IK参数调优，详见"旋转控制优化说明.md"
+
+# /home/xhz/isaaclab/source/isaaclab/isaaclab/envs/mdp/actions/pink_task_space_actions.py
+
+# /home/xhz/isaaclab/source/isaaclab/isaaclab/devices/keyboard/semi_body_se3_keyboard.py
+
+
+
+# 要是调整坐标系的正反，请在/home/xhz/isaaclab/source/isaaclab/isaaclab/envs/mdp/actions/multi_pink_ik_actions.py这里面的291行（        
+        # 头部位置转换 (索引 21:24)
+        actions_corrected[:, 21] = (actions[:, 21] + X_OFFSET)
+        actions_corrected[:, 22] = (actions[:, 22] + Y_OFFSET)
+        actions_corrected[:, 23] = (actions[:, 23] + Z_OFFSET)）
+
+# /home/xhz/isaaclab/source/isaaclab/isaaclab/devices/keyboard/semi_body_se3_udp.py：
+                # 这里能正确强制修改头的坐标
+                center_pos = (left_pos + right_pos) / 2.0
+                center_pos[1] = -center_pos[1]
+                center_pos[2] = -center_pos[2]
+                self._neck_pos = center_pos
