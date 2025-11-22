@@ -19,7 +19,7 @@ class UnitreeG1FlatEnvCfg(UnitreeG1RoughEnvCfg):
         # 取消地形课程
         self.curriculum.terrain_levels = None
 
-        # -------------奖励部分（多注释）----------------
+        # -------------奖励部分----------------
         self.rewards.track_ang_vel_z_exp.weight = 1.0  # 鼓励Z轴角速度追踪
         self.rewards.lin_vel_z_l2.weight = -0.2  # 惩罚垂直线速度偏差
         self.rewards.action_rate_l2.weight = -0.005  # 控制动作变化平滑
@@ -29,4 +29,4 @@ class UnitreeG1FlatEnvCfg(UnitreeG1RoughEnvCfg):
 
         # 奖励权重为0时禁用
         if self.__class__.__name__ == "UnitreeG1FlatEnvCfg":
-            self.disable_zero_weight_rewards()
+            self.disable_zero_weight_rewards()  
