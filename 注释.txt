@@ -13,7 +13,7 @@ URDF-USD转换：
 
 python scripts/reinforcement_learning/rsl_rl/train.py --task=RobotLab-Isaac-Velocity-Flat-Unitree-G1-v0 --num_envs 12288 --headless
 
-./isaaclab.sh -p -m tensorboard.main --logdir=logs
+python -m tensorboard.main --logdir=/root/robot_lab/logs/rsl_rl/unitree_g1_flat
 
 
 
