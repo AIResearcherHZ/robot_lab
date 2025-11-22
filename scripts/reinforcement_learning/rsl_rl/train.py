@@ -35,6 +35,7 @@ parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
 parser.add_argument("--export_io_descriptors", action="store_true", default=False, help="Export IO descriptors.")
+parser.add_argument("--record_torque", action="store_true", default=False, help="Enable torque recording with keyboard control.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -93,6 +94,10 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import robot_lab.tasks  # noqa: F401
+
+# import torque recorder
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from torque_recorder import init_torque_recorder, close_torque_recorder, get_torque_recorder
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -180,6 +185,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
+    # initialize torque recorder with environment for auto joint name extraction
+    torque_save_dir = os.path.join(log_dir, "torque_logs") if args_cli.record_torque else None
+    init_torque_recorder(enabled=args_cli.record_torque, save_dir=torque_save_dir, env=env)
+
     # create runner from rsl-rl
     if agent_cfg.class_name == "OnPolicyRunner":
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
@@ -201,6 +210,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
+
+    # close torque recorder
+    close_torque_recorder()
 
     # close the simulator
     env.close()

@@ -31,6 +31,7 @@ parser.add_argument("--logger", type=str, default="tensorboard", help="Logger to
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--autocast", nargs="?", const=True, help="Datatype for automatic mixed precision.")
 parser.add_argument("--compile", action="store_true", help="Whether to use `torch.compile` for optimization.")
+parser.add_argument("--record_torque", action="store_true", default=False, help="Enable torque recording with keyboard control.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -69,6 +70,9 @@ from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils.hydra import hydra_task_config  # noqa: F401
 
 import robot_lab.tasks  # noqa: F401
+
+# import torque recorder
+from torque_recorder import init_torque_recorder, close_torque_recorder
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -119,6 +123,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
+    # initialize torque recorder with environment for auto joint name extraction
+    torque_save_dir = os.path.join(log_dir, "torque_logs") if args_cli.record_torque else None
+    init_torque_recorder(enabled=args_cli.record_torque, save_dir=torque_save_dir, env=env)
+
     # create trainer from cusrl
     trainer = cusrl.Trainer(
         environment=cusrl.environment.IsaacLabEnvAdapter(env),
@@ -133,6 +141,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # run training
     trainer.run_training_loop()
+
+    # close torque recorder
+    close_torque_recorder()
 
     # close the simulator
     env.close()

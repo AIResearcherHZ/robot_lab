@@ -36,6 +36,7 @@ parser.add_argument(
     help="Whether to run the agent in stochastic mode.",
 )
 parser.add_argument("--keyboard", action="store_true", default=False, help="Whether to use keyboard.")
+parser.add_argument("--record_torque", action="store_true", default=False, help="Enable torque recording with keyboard control.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -71,10 +72,29 @@ from isaaclab_tasks.utils.hydra import hydra_task_config  # noqa: F401
 
 import robot_lab.tasks  # noqa: F401
 
+# import torque recorder
+from torque_recorder import init_torque_recorder, close_torque_recorder, get_torque_recorder
+
 
 class CameraFollowPlayerHook(cusrl.Player.Hook):
     def step(self, step: int, transition: dict, metrics: dict):
         camera_follow(self.player.environment)
+
+
+class TorqueRecorderHook(cusrl.Player.Hook):
+    """Hook to record torques during playing (joint names auto-extracted during init)"""
+    def step(self, step: int, transition: dict, metrics: dict):
+        recorder = get_torque_recorder()
+        if recorder is not None:
+            env = self.player.environment.unwrapped
+            if hasattr(env, 'scene'):
+                try:
+                    robot = env.scene["robot"]
+                    if hasattr(robot, 'data') and hasattr(robot.data, 'applied_torque'):
+                        torques = robot.data.applied_torque
+                        recorder.record_step(torques)
+                except:
+                    pass
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -148,6 +168,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
+    # initialize torque recorder with environment for auto joint name extraction
+    torque_save_dir = os.path.join(log_dir, "torque_logs") if args_cli.record_torque else None
+    init_torque_recorder(enabled=args_cli.record_torque, save_dir=torque_save_dir, env=env)
+
     # create player from cusrl
     player = cusrl.Player(
         environment=cusrl.environment.IsaacLabEnvAdapter(env),
@@ -162,9 +186,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     if args_cli.keyboard:
         player.register_hook(CameraFollowPlayerHook())
+    
+    # register torque recorder hook (joint names auto-extracted during init)
+    if args_cli.record_torque:
+        player.register_hook(TorqueRecorderHook())
 
     # run playing loop
     player.run_playing_loop()
+
+    # close torque recorder
+    close_torque_recorder()
 
     # close the simulator
     env.close()

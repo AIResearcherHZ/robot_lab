@@ -41,6 +41,7 @@ parser.add_argument(
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
 parser.add_argument("--keyboard", action="store_true", default=False, help="Whether to use keyboard.")
+parser.add_argument("--record_torque", action="store_true", default=False, help="Enable torque recording with keyboard control.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -83,6 +84,9 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import robot_lab.tasks  # noqa: F401
+
+# import torque recorder
+from torque_recorder import init_torque_recorder, close_torque_recorder, get_torque_recorder
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -171,6 +175,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
+    # initialize torque recorder with environment for auto joint name extraction
+    torque_save_dir = os.path.join(log_dir, "torque_logs") if args_cli.record_torque else None
+    init_torque_recorder(enabled=args_cli.record_torque, save_dir=torque_save_dir, env=env)
+
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
     if agent_cfg.class_name == "OnPolicyRunner":
@@ -211,6 +219,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     obs = env.get_observations()
     timestep = 0
+    
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -221,6 +230,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # actions = torch.zeros_like(actions)
             # env stepping
             obs, _, _, _ = env.step(actions)
+            
+            # record torques if enabled (joint names auto-extracted during init)
+            recorder = get_torque_recorder()
+            if recorder is not None and hasattr(env.unwrapped, 'scene'):
+                try:
+                    robot = env.unwrapped.scene["robot"]
+                    if hasattr(robot, 'data') and hasattr(robot.data, 'applied_torque'):
+                        torques = robot.data.applied_torque
+                        recorder.record_step(torques)
+                except:
+                    pass
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
@@ -234,6 +254,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:
             time.sleep(sleep_time)
+
+    # close torque recorder
+    close_torque_recorder()
 
     # close the simulator
     env.close()
