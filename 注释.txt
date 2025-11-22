@@ -11,7 +11,7 @@ URDF-USD转换：
 
 宇树G1步态训练(/root/robot_lab/source/robot_lab/robot_lab/tasks/manager_based/locomotion/velocity/config/humanoid/unitree_g1)：
 
-python scripts/reinforcement_learning/rsl_rl/train.py --task=RobotLab-Isaac-Velocity-Flat-Unitree-G1-v0 --headless
+python scripts/reinforcement_learning/rsl_rl/train.py --task=RobotLab-Isaac-Velocity-Flat-Unitree-G1-v0 --num_envs 8192 --headless
 
 ./isaaclab.sh -p -m tensorboard.main --logdir=logs
 

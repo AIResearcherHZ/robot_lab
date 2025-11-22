@@ -43,6 +43,6 @@ class UnitreeG1FlatPPORunnerCfg(UnitreeG1RoughPPORunnerCfg):
         super().__post_init__()
 
         # 平坦地形训练的最大迭代次数更少，节省计算资源
-        self.max_iterations = 1500
+        self.max_iterations = 1000
         # 对应的实验名称，用于单独区分日志与模型
         self.experiment_name = "unitree_g1_flat"
