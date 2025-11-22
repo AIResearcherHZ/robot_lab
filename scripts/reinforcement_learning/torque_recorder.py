@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from pynput import keyboard
 
+
 class TorqueRecorder:
     """扭矩记录器，使用pynput监听键盘输入控制记录"""
 
@@ -257,12 +258,14 @@ class TorqueRecorder:
         if self.enabled:
             if self.is_recording:
                 self._stop_recording()
-            if hasattr(self, 'listener') and self.listener is not None:
+            if hasattr(self, 'listener'):
                 self.listener.stop()
             print("[TorqueRecorder] 扭矩记录器已关闭")
 
+
 # 全局记录器实例
 _global_recorder: Optional[TorqueRecorder] = None
+
 
 def get_torque_recorder() -> Optional[TorqueRecorder]:
     """获取全局扭矩记录器实例"""

@@ -1,5 +1,9 @@
 from robot_lab.assets.unitree import UNITREE_G1_29DOF_ACTION_SCALE, UNITREE_G1_29DOF_CFG  # isort: skip
 
+from isaaclab.utils import configclass
+from robot_lab.tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
+from robot_lab.tasks.manager_based.locomotion.velocity.mdp import rewards
+
 @configclass
 class UnitreeG1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     base_link_name = "torso_link"  # 基座链接
@@ -108,13 +112,13 @@ class UnitreeG1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # 速度追踪奖励
         self.rewards.track_lin_vel_xy_exp.weight = 3.0  # 强化线速度平面追踪
-        self.rewards.track_lin_vel_xy_exp.func = mdp.track_lin_vel_xy_yaw_frame_exp
+        self.rewards.track_lin_vel_xy_exp.func = rewards.track_lin_vel_xy_yaw_frame_exp
         self.rewards.track_ang_vel_z_exp.weight = 3.0  # 强化角速度追踪
-        self.rewards.track_ang_vel_z_exp.func = mdp.track_ang_vel_z_world_exp
+        self.rewards.track_ang_vel_z_exp.func = rewards.track_ang_vel_z_world_exp
 
         # 其他奖励设置
         self.rewards.feet_air_time.weight = 0.25  # 奖励脚部空中时间
-        self.rewards.feet_air_time.func = mdp.feet_air_time_positive_biped
+        self.rewards.feet_air_time.func = rewards.feet_air_time_positive_biped
         self.rewards.feet_air_time.params["threshold"] = 0.4
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_contact.weight = 0  # 脚部接地奖励关闭
